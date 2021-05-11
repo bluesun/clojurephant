@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 import us.bpsm.edn.Keyword;
 import us.bpsm.edn.parser.Parser;
 import us.bpsm.edn.parser.Parsers;
@@ -24,6 +26,9 @@ import us.bpsm.edn.printer.Printer;
 import us.bpsm.edn.printer.Printers;
 
 public class PreplClient implements AutoCloseable {
+  private static final Logger logger = Logging.getLogger(PreplClient.class);
+
+
   private static final Keyword TAG = Keyword.newKeyword("tag");
 
   private static final Keyword RET = Keyword.newKeyword("ret");
@@ -60,13 +65,22 @@ public class PreplClient implements AutoCloseable {
     this.inputThread = new Thread(this::inputLoop);
   }
 
+
+  private static int randomWait() {
+    return (int) (Math.random() * 250);
+  }
+
   void start() {
     this.inputThread.start();
     try {
-      // there's a race condition while waiting for this promise to exist, so give it a few trys
-      for (int i = 0; i < 10; i++) {
+      // There's a race condition while waiting for this promise to exist, so give it a few trys
+      // The value for i is chosen so that the REPL task starts successfully even
+      // if all gradle dependencies must be fetched again (e.g. after deleting ~/.gradle/)
+      // Randomization added to avoid the race condition with the method socketConnect
+      // (in the current Class, see below)
+      for (int i = 0; i < 30; i++) {
         if (i != 0) {
-          Thread.sleep(100 * (i + 1));
+          Thread.sleep(randomWait() * (i + 1));
         }
         try {
           evalEdn("(do (require 'dev.clojurephant.prepl) (deliver dev.clojurephant.prepl/connected true))");
@@ -158,9 +172,9 @@ public class PreplClient implements AutoCloseable {
     SocketChannel socket = null;
     // there's a race condition while waiting for the server to start, so give it a few trys
     try {
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i < 30; i++) {
         if (i != 0) {
-          Thread.sleep(100 * (i + 1));
+          Thread.sleep(randomWait() * (i + 1));
         }
         try {
           InetSocketAddress addr = new InetSocketAddress(address, port);

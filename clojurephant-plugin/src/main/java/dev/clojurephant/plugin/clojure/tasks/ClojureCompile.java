@@ -108,9 +108,11 @@ public class ClojureCompile extends DefaultTask {
   @TaskAction
   public void compile() {
     File outputDir = getDestinationDir().get().getAsFile();
+    logger.debug("Deleting destination directory");
     if (!getProject().delete(outputDir)) {
       throw new GradleException("Cannot clean destination directory: " + outputDir.getAbsolutePath());
     }
+    logger.debug("Creating destination directory");
     if (!outputDir.mkdirs()) {
       throw new GradleException("Cannot create destination directory: " + outputDir.getAbsolutePath());
     }
